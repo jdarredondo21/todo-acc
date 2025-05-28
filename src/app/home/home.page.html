@@ -1,20 +1,163 @@
-<ion-header [translucent]="true">
+<ion-header>
   <ion-toolbar>
-    <ion-title>
-      Blank
+    <ion-title class="ion-text-center">
+      <i class="fas fa-list-check"></i> Lista de Tareas
     </ion-title>
   </ion-toolbar>
 </ion-header>
 
-<ion-content [fullscreen]="true">
-  <ion-header collapse="condense">
-    <ion-toolbar>
-      <ion-title size="large">Blank</ion-title>
-    </ion-toolbar>
-  </ion-header>
+<ion-content class="ion-padding">
 
-  <div id="container">
-    <strong>Ready to create an app?</strong>
-    <p>Start with Ionic <a target="_blank" rel="noopener noreferrer" href="https://ionicframework.com/docs/components">UI Components</a></p>
+  <!--  CONTENEDOR GENERAL CENTRADO -->
+  <div class="content-general" >
+
+    <!-- Crear tarea y categoría -->
+    <ion-grid>
+      <ion-row>
+         <!-- Categoría -->
+         <ion-col size="12" size-md="6" *ngIf="remoteConfigEnabled">
+          <ion-card class="card-item">
+            <ion-card-header>
+              <ion-card-title class="name-category"><i class="fas fa-folder-plus"></i> Nueva Categoría</ion-card-title>
+            </ion-card-header>
+            <ion-card-content>
+              <ion-item>
+                <ion-input [(ngModel)]="newCategoryName" placeholder="Ej: Personal, Trabajo..."></ion-input>
+              </ion-item>
+
+              <ion-button color="purple" expand="block" (click)="addCategory()">
+                <i class="fas fa-plus"></i> Agregar Categoría
+              </ion-button>
+            </ion-card-content>
+          </ion-card>
+        </ion-col>
+        <!-- Tarea -->
+        <ion-col size="12" size-md="6">
+          <ion-card class="card-item">
+            <ion-card-header>
+              <ion-card-title class="name-category"><i class="fas fa-plus-circle"></i> Nueva Tarea</ion-card-title>
+            </ion-card-header>
+            <ion-card-content>
+              <ion-item>
+                <ion-input [(ngModel)]="newTaskTitle" placeholder="Escribe una tarea..."></ion-input>
+              </ion-item>
+
+              <ion-item *ngIf="remoteConfigEnabled">
+                <ion-select [(ngModel)]="selectedCategoryId" placeholder="Categoría">
+                  <ion-select-option *ngFor="let cat of categories" [value]="cat.id">
+                    {{ cat.name }}
+                  </ion-select-option>
+                </ion-select>
+              </ion-item>
+
+              <ion-button color="purple" expand="block" (click)="addTask()">
+                <i class="fas fa-check"></i> Agregar
+              </ion-button>
+            </ion-card-content>
+          </ion-card>
+        </ion-col>
+
+       
+      </ion-row>
+    </ion-grid>
+
+    <!--  Filtros y orden -->
+    <ion-grid>
+      <ion-row>
+        <ion-col size-md="6" size-sm="12">
+          <ion-item class="content-filter">
+            <ion-label class="label-filter">Filtrar por categoría</ion-label>
+            <ion-select [(ngModel)]="selectedFilterId" (ionChange)="applyFilter()">
+              <ion-select-option value="">Todas</ion-select-option>
+              <ion-select-option *ngFor="let cat of categories" [value]="cat.id">
+                {{ cat.name }}
+              </ion-select-option>
+            </ion-select>
+          </ion-item>
+        </ion-col>
+        <ion-col size-md="6" size-sm="12">
+          <ion-item class="content-filter">
+            <ion-label class="label-filter">Ordenar por</ion-label>
+            <ion-select [(ngModel)]="sortOption" (ionChange)="applyFilter()">
+              <ion-select-option value="date_desc">Fecha más reciente</ion-select-option>
+              <ion-select-option value="date_asc">Fecha más antigua</ion-select-option>
+              <ion-select-option value="pending_first">Pendientes primero</ion-select-option>
+              <ion-select-option value="completed_first">Completadas primero</ion-select-option>
+            </ion-select>
+          </ion-item>
+        </ion-col>
+      </ion-row>
+    </ion-grid>
+
+    <!-- Contador -->
+    <ion-item lines="none" class="ion-margin-top">
+      <ion-label>
+        <i class="fas fa-hourglass-half"></i> Pendientes: {{ pendingCount }} |
+        <i class="fas fa-check-circle"></i> Completadas: {{ completedCount }}
+      </ion-label>
+    </ion-item>
+
+    <!-- Lista de tareas -->
+    <ion-list>
+      <ion-item *ngIf="filteredTasks.length === 0">
+        <ion-label color="medium" class="ion-text-center">
+          No hay tareas disponibles.
+        </ion-label>
+      </ion-item>
+
+      <ion-item-sliding *ngFor="let task of filteredTasks">
+        <ion-item *ngIf="editingTaskId !== task.id; else editForm">
+          <ion-checkbox
+            slot="start"
+            [(ngModel)]="task.completed"
+            (ionChange)="confirmToggleComplete(task)">
+          </ion-checkbox>
+          <ion-label [ngClass]="{ 'completed': task.completed }">
+            {{ task.title }}
+            <div class="category-label" *ngIf="remoteConfigEnabled">
+              <i class="fas fa-tag"></i> {{ getCategoryName(task.categoryId) }}
+            </div>
+          </ion-label>
+          <ion-button slot="end" fill="clear" (click)="startEdit(task)">
+            <i class="fas fa-pen"></i>
+          </ion-button>
+        </ion-item>
+
+        <ng-template #editForm>
+          <ion-item>
+            <ion-input [(ngModel)]="editingTaskTitle" placeholder="Editar tarea"></ion-input>
+            <ion-select [(ngModel)]="editingCategoryId" *ngIf="remoteConfigEnabled">
+              <ion-select-option *ngFor="let cat of categories" [value]="cat.id">{{ cat.name }}</ion-select-option>
+            </ion-select>
+            <ion-button (click)="saveEdit(task)">
+              <i class="fas fa-save"></i>
+            </ion-button>
+            <ion-button color="medium" (click)="cancelEdit()">
+              <i class="fas fa-times"></i>
+            </ion-button>
+          </ion-item>
+        </ng-template>
+
+        <ion-item-options side="end">
+          <ion-item-option color="danger" (click)="confirmDeleteTask(task.id)">
+            <i class="fas fa-trash-alt"></i>
+          </ion-item-option>
+        </ion-item-options>
+      </ion-item-sliding>
+    </ion-list>
+
+    <!--  Botón para borrar todo -->
+    <ion-button expand="block" fill="outline" color="danger" (click)="deleteAllTasks()">
+      <i class="fas fa-trash"></i> Eliminar todas las tareas
+    </ion-button>
+
   </div>
 </ion-content>
+
+<ion-footer>
+  <ion-toolbar class="footer-todo" color="black">
+    <ion-title class="ion-text-center" size="small">
+      Realizado por <a target="_blank" href="https://www.linkedin.com/in/jhonatan-damian-4b408917a/">Damian Arredondo</a>
+    </ion-title>
+  </ion-toolbar>
+</ion-footer>

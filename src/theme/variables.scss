@@ -1,2 +1,22 @@
 // For information on how to create your own theme, please see:
 // http://ionicframework.com/docs/theming/
+
+:root {
+    --ion-color-purple: #a602ff;
+    --ion-color-white: #ffffff;
+    --ion-color-black: #000000;
+    --padding-normal: 30px 0
+    --height-card: 210px
+  }
+  
+  .ion-color-purple {
+    --ion-color-base: var(--ion-color-purple);
+  }
+  .ion-color-white {
+    --ion-color-base: var(--ion-color-white);
+  }
+  .ion-color-black {
+    --ion-color-base: var(--ion-color-black);
+  }
+
+  
